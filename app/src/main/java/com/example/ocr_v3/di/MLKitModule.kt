@@ -1,8 +1,6 @@
 package com.example.ocr_v3.di
 
-import com.example.ocr_v3.data.local.CardDao
 import com.example.ocr_v3.data.mlkit.TextRecognizer
-import com.example.ocr_v3.data.repository.CardRepositoryImpl
 import com.example.ocr_v3.domain.usecase.ParseCardUseCase
 import dagger.Module
 import dagger.Provides

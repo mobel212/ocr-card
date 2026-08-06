@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.example.ocr_v3.presentation.navigation.Routes
 
 @Preview(showBackground = true)
 @Composable

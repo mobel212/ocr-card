@@ -4,7 +4,6 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Query
 import androidx.room.Upsert
-import com.example.ocr_v3.domain.model.Card
 import kotlinx.coroutines.flow.Flow
 
 @Dao

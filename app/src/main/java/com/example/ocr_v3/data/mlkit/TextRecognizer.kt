@@ -1,7 +1,6 @@
 package com.example.ocr_v3.data.mlkit
 
 import android.graphics.Bitmap
-import com.example.ocr_v3.domain.model.Card
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions

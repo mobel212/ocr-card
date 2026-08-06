@@ -1,4 +1,4 @@
-package com.example.ocr_v3.presentation
+package com.example.ocr_v3.presentation.navigation
 
 object Routes {
     val HomeScreen = "home"

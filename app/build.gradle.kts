@@ -69,11 +69,11 @@ dependencies {
 
 
 
+    //icons
+    implementation("androidx.compose.material:material-icons-core")
+
     // ML Kit
     implementation("com.google.mlkit:text-recognition:16.0.1")
-
-    //icons
-    implementation("androidx.compose.material:material-icons-extended")
 
 
     //room
@@ -86,6 +86,7 @@ dependencies {
     //sqlcipher
     implementation( "net.zetetic:android-database-sqlcipher:4.5.3")
     implementation( "androidx.sqlite:sqlite:2.7.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
 
     implementation(platform(libs.androidx.compose.bom))

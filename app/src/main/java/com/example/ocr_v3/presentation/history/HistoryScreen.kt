@@ -19,11 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,19 +37,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.ocr_v3.domain.model.Card
-import com.example.ocr_v3.presentation.CardEvent
-import com.example.ocr_v3.presentation.scanner.ScannerViewModel
-import com.example.ocr_v3.ui.theme.Purple40
-import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.map
-import javax.inject.Inject
+import com.example.ocr_v3.ui.icons.AppIcons
 
 
 val cardBackgroundColor = Color(0xFFC1D4EB) // Light blue
@@ -177,7 +165,7 @@ fun CardUi(
                     .background(Color.Black.copy(alpha = 0.4f), CircleShape)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = AppIcons.Delete,
                     contentDescription = "delete this card"
                 )
             }

@@ -8,12 +8,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ocr_v3.data.mlkit.TextRecognizer
-import com.example.ocr_v3.domain.model.Card
 import com.example.ocr_v3.domain.repository.CardRepository
 import com.example.ocr_v3.domain.usecase.ParseCardUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 

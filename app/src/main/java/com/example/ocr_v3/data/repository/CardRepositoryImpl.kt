@@ -4,7 +4,6 @@ import com.example.ocr_v3.data.local.CardDao
 import com.example.ocr_v3.data.local.CardEntity
 import com.example.ocr_v3.domain.model.Card
 import com.example.ocr_v3.domain.repository.CardRepository
-import dagger.Provides
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
