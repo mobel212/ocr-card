@@ -1,18 +1,37 @@
-# Implementation Plan - Fix Hilt Preview Error in ResultScreen
+# Implementation Plan - Navigation Stability & UI Modernization
 
-The `ResultScreen` composable fails to render in Android Studio Preview because it directly calls `hiltViewModel()` in its parameters. Hilt requires an `Activity` context, which is not available in the Preview environment.
+This plan addresses the navigation crashes and inconsistencies while further modernizing the Camera, Preview, and Result screens to match the app's premium minimalist theme.
 
 ## Proposed Changes
 
-### [MODIFY] [ResultScreen.kt](file:///C:/Users/hp/AndroidStudioProjects/ocrv3/app/src/main/java/com/example/ocr_v3/presentation/scanner/ResultScreen.kt)
+### [Navigation & Stability]
 
-- **State Hoisting**: Refactor `ResultScreen` to separate the Hilt-dependent logic from the UI layout.
-- **New Composable `ResultScreenContent`**: A stateless version of the screen that accepts `ScannerState` and callback functions for user interactions.
-- **Update `ResultScreen`**: Use this as the entry point that retrieves the ViewModel via Hilt and passes the state/callbacks to `ResultScreenContent`.
-- **Fix Preview**: Update the `@Preview` function to call `ResultScreenContent` with a default `ScannerState` and empty callbacks, bypassing Hilt.
+#### [MODIFY] [HomeScreen.kt](file:///C:/Users/hp/AndroidStudioProjects/ocrv3/app/src/main/java/com/example/ocr_v3/presentation/HomeScreen.kt)
+- Update the "See all history" button's `onClick` to use the same navigation options as the bottom bar (`popUpTo`, `launchSingleTop`, `restoreState`). This ensures the backstack remains consistent and prevents the "stuck" navigation issue.
+
+#### [MODIFY] [CameraScreen.kt](file:///C:/Users/hp/AndroidStudioProjects/ocrv3/app/src/main/java/com/example/ocr_v3/presentation/camera/CameraScreen.kt)
+- Replace `LaunchedEffect` with `DisposableEffect` for camera binding to ensure a safer lifecycle transition when the user navigates back.
+
+### [UI Modernization]
+
+#### [MODIFY] [CameraScreen.kt](file:///C:/Users/hp/AndroidStudioProjects/ocrv3/app/src/main/java/com/example/ocr_v3/presentation/camera/CameraScreen.kt)
+- Update `MrzFrameOverlay` to use `PrimaryPurple` for the corner brackets and a more refined semi-transparent overlay.
+- Style the instruction text with a subtle background glass effect for better readability.
+
+#### [MODIFY] [PhotoPreview.kt](file:///C:/Users/hp/AndroidStudioProjects/ocrv3/app/src/main/java/com/example/ocr_v3/presentation/camera/PhotoPreview.kt)
+- Ensure the rotation button and main action buttons follow the `PrimaryPurple` theme.
+- Add a subtle background color to the crop instruction text.
+
+#### [MODIFY] [ResultScreen.kt](file:///C:/Users/hp/AndroidStudioProjects/ocrv3/app/src/main/java/com/example/ocr_v3/presentation/scanner/ResultScreen.kt)
+- Refine the Snackbar appearance and ensure the "Confirm & Save" button provides clear visual feedback.
+- Improve the vertical spacing and typography of the result cards.
 
 ## Verification Plan
 
 ### Manual Verification
-- Render the `ResultScreenPreview` in Android Studio to ensure it displays correctly without errors.
-- Verify that the UI elements (TextFields and Button) are properly rendered.
+- **Navigation Test**:
+    - Go Home -> History (via button) -> Home (via navbar). Verify it works perfectly.
+    - Go Home -> Scan -> Back (system button). Verify no crash occurs.
+- **UI Test**:
+    - Verify all screens consistently use the `PrimaryPurple` and `BackgroundLight` palette.
+    - Confirm the success message appears after saving a card.

@@ -8,4 +8,5 @@ object Routes {
     val HistoryScreen = "history"
 
     val ResultScreen = "result"
+    val PhotoPreview = "photopreview"
 }

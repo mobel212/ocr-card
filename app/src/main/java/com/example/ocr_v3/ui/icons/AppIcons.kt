@@ -18,32 +18,35 @@ object AppIcons {
             defaultHeight = 24.dp,
             viewportWidth = 24f,
             viewportHeight = 24f
-        ).path(fill = SolidColor(Color.Black)) {
-            moveTo(12f, 12f)
-            curveTo(14.21f, 12f, 16f, 10.21f, 16f, 8f)
-            reflectiveCurveTo(14.21f, 4f, 12f, 4f)
-            reflectiveCurveTo(8f, 5.79f, 8f, 8f)
-            reflectiveCurveTo(9.79f, 12f, 12f, 12f)
+        ).path(
+            fill = SolidColor(Color.Black),
+            strokeLineWidth = 0f
+        ) {
+            moveTo(12f, 8f)
+            curveToRelative(-2.21f, 0f, -4f, 1.79f, -4f, 4f)
+            reflectiveCurveToRelative(1.79f, 4f, 4f, 4f)
+            reflectiveCurveToRelative(4f, -1.79f, 4f, -4f)
+            reflectiveCurveToRelative(-1.79f, -4f, -4f, -4f)
             close()
-            moveTo(9f, 2f)
+            moveTo(20f, 4f)
+            horizontalLineToRelative(-3.17f)
+            lineTo(15f, 2f)
+            lineTo(9f, 2f)
             lineTo(7.17f, 4f)
-            horizontalLineTo(4f)
-            curveTo(2.9f, 4f, 2f, 4.9f, 2f, 6f)
+            lineTo(4f, 4f)
+            curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
             verticalLineToRelative(12f)
             curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
             horizontalLineToRelative(16f)
             curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
-            verticalLineTo(6f)
+            lineTo(22f, 6f)
             curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
-            horizontalLineToRelative(-3.17f)
-            lineTo(15f, 2f)
-            horizontalLineTo(9f)
             close()
-            moveTo(12f, 17f)
-            curveToRelative(-2.76f, 0f, -5f, -2.24f, -5f, -5f)
-            reflectiveCurveToRelative(2.24f, -5f, 5f, -5f)
-            reflectiveCurveToRelative(5f, 2.24f, 5f, 5f)
-            reflectiveCurveToRelative(-2.24f, 5f, -5f, 5f)
+            moveTo(12f, 18f)
+            curveToRelative(-3.31f, 0f, -6f, -2.69f, -6f, -6f)
+            reflectiveCurveToRelative(2.69f, -6f, 6f, -6f)
+            reflectiveCurveToRelative(6f, 2.69f, 6f, 6f)
+            reflectiveCurveToRelative(-2.69f, 6f, -6f, 6f)
             close()
         }.build()
 
@@ -118,6 +121,75 @@ object AppIcons {
             horizontalLineToRelative(14f)
             verticalLineTo(7f)
             horizontalLineTo(7f)
+            close()
+        }.build()
+
+    val ContentCopy: ImageVector
+        get() = ImageVector.Builder(
+            name = "ContentCopy",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).path(fill = SolidColor(Color.Black)) {
+            moveTo(16f, 1f)
+            horizontalLineTo(4f)
+            curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
+            verticalLineToRelative(14f)
+            horizontalLineToRelative(2f)
+            verticalLineTo(3f)
+            horizontalLineToRelative(12f)
+            verticalLineTo(1f)
+            close()
+            moveTo(19f, 5f)
+            lineTo(19f, 5f)
+            horizontalLineTo(8f)
+            curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
+            verticalLineToRelative(14f)
+            curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
+            horizontalLineToRelative(11f)
+            curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
+            verticalLineTo(7f)
+            curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
+            close()
+            moveTo(19f, 21f)
+            horizontalLineTo(8f)
+            verticalLineTo(7f)
+            horizontalLineToRelative(11f)
+            verticalLineTo(21f)
+            close()
+        }.build()
+
+    val RotateRight: ImageVector
+        get() = ImageVector.Builder(
+            name = "RotateRight",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).path(fill = SolidColor(Color.Black)) {
+            moveTo(15.55f, 5.55f)
+            lineTo(11f, 1f)
+            verticalLineToRelative(3.07f)
+            curveTo(7.06f, 4.56f, 4f, 7.92f, 4f, 12f)
+            reflectiveCurveToRelative(3.06f, 7.44f, 7f, 7.93f)
+            verticalLineToRelative(-2.02f)
+            curveToRelative(-2.84f, -0.48f, -5f, -2.94f, -5f, -5.91f)
+            reflectiveCurveToRelative(2.16f, -5.43f, 5f, -5.91f)
+            verticalLineTo(10f)
+            lineTo(15.55f, 5.55f)
+            close()
+            moveTo(19.93f, 11f)
+            curveToRelative(-0.17f, -1.39f, -0.72f, -2.73f, -1.62f, -3.89f)
+            lineToRelative(-1.42f, 1.42f)
+            curveToRelative(0.54f, 0.75f, 0.88f, 1.6f, 1.01f, 2.47f)
+            horizontalLineTo(19.93f)
+            close()
+            moveTo(15.89f, 15.48f)
+            lineToRelative(1.42f, 1.42f)
+            curveToRelative(0.9f, -1.16f, 1.45f, -2.5f, 1.62f, -3.89f)
+            horizontalLineToRelative(-2.02f)
+            curveTo(16.77f, 13.88f, 16.43f, 14.73f, 15.89f, 15.48f)
             close()
         }.build()
 }

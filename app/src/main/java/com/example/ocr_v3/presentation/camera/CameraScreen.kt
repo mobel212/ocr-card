@@ -21,9 +21,10 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +43,7 @@ import androidx.navigation.NavController
 import com.example.ocr_v3.presentation.navigation.Routes
 import com.example.ocr_v3.presentation.scanner.ScannerViewModel
 import com.example.ocr_v3.ui.icons.AppIcons
+import com.example.ocr_v3.ui.theme.PrimaryPurple
 
 @Composable
 fun CameraPreview(
@@ -61,7 +63,7 @@ fun CameraPreview(
 
 @Composable
 fun CameraScreen(
-    scannerViewModel: ScannerViewModel,
+    sharedViewModel: SharedViewModel,
     navController: NavController
 ) {
     val context = LocalContext.current
@@ -73,8 +75,11 @@ fun CameraScreen(
         }
     }
 
-    LaunchedEffect(lifecycleOwner) {
+    DisposableEffect(lifecycleOwner) {
         controller.bindToLifecycle(lifecycleOwner)
+        onDispose {
+            controller.unbind()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -109,23 +114,29 @@ fun CameraScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
-                .padding(top = 100.dp),
+                .padding(top = 80.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "Scan the back of your card",
                 color = Color.White,
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = "Align the MRZ code inside the frame",
-                color = Color.White.copy(alpha = 0.85f),
-                style = MaterialTheme.typography.bodyLarge,
-                textAlign = TextAlign.Center
-            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                color = Color.Black.copy(alpha = 0.3f),
+                shape = CircleShape
+            ) {
+                Text(
+                    text = "Align the MRZ code inside the frame",
+                    color = Color.White.copy(alpha = 0.9f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    textAlign = TextAlign.Center
+                )
+            }
         }
 
         /* ── 4. Capture button (bottom-center) ── */
@@ -135,8 +146,8 @@ fun CameraScreen(
                     controller = controller,
                     contextCam = context,
                     onPhotoTaken = { picBitmap ->
-                        scannerViewModel.onPhotoTaken(picBitmap)
-                        navController.navigate(Routes.ResultScreen)
+                        sharedViewModel.setPhotoBitmap(picBitmap)
+                        navController.navigate(Routes.PhotoPreview)
                     }
                 )
             },
@@ -151,33 +162,29 @@ fun CameraScreen(
             Icon(
                 imageVector = AppIcons.PhotoCamera,
                 contentDescription = "Capture",
-                tint = Color(0xFF2563EB),
+                tint = PrimaryPurple,
                 modifier = Modifier.size(32.dp)
             )
         }
     }
 }
-    /* ───────────────────────────────────────────────
-   Overlay: darkens everything except the card area
-   and draws four corner brackets.
-   ─────────────────────────────────────────────── */
     @Composable
     fun MrzFrameOverlay(modifier: Modifier = Modifier) {
-        val bracketColor = Color(0xFF3B82F6)
-        val overlayColor = Color.Black.copy(alpha = 0.55f)
+        val bracketColor = PrimaryPurple
+        val overlayColor = Color.Black.copy(alpha = 0.65f)
 
 
         Canvas(modifier = modifier) {
             // Card frame size (centered)
-            val cardW = size.width * 0.88f
+            val cardW = size.width * 0.90f
             val cardH = cardW / 1.586f          // ISO 7810 ID-1 aspect ratio
             val left = (size.width - cardW) / 2
             val top = (size.height - cardH) / 2
             val right = left + cardW
             val bottom = top + cardH
 
-            val cornerLen = 36.dp.toPx()
-            val stroke = 4.dp.toPx()
+            val cornerLen = 40.dp.toPx()
+            val stroke = 5.dp.toPx()
 
             // 1. Dim the outside
             drawRect(overlayColor, topLeft = Offset(0f, 0f), size = Size(size.width, top))

@@ -17,7 +17,7 @@ class ParseCardUseCase {
         var address = ""
 
         // 1- Address
-        val addressRegex = Regex("""(?i)^ad?r?[eaos]{1,4}e?\s*[:.-]?\s*(.*)$""")
+        val addressRegex = Regex("""(?i)^[aá]d?r?[eaos]{1,4}e?\s*[:.-]?\s*(.*)$""")
         for (line in lines) {
             val match = addressRegex.find(line)
             if (match != null) {
@@ -55,7 +55,7 @@ class ParseCardUseCase {
 
             // --- Extract Names (From Line 3) ---
             // Format: LASTNAME<<FIRSTNAME<<...
-            val nameParts = mrz3.split("<<")
+            val nameParts = mrz3.split(Regex("""[<Kk]<"""))
             if (nameParts.isNotEmpty()) {
                 lastName = nameParts[0].replace("<", " ").trim()
                 if (nameParts.size > 1) {

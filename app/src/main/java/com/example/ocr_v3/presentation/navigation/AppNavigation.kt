@@ -5,13 +5,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.example.ocr_v3.ui.theme.PrimaryPurple
+import com.example.ocr_v3.ui.theme.TextGray
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -20,10 +27,13 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.ocr_v3.presentation.HomeScreen
 import com.example.ocr_v3.presentation.camera.CameraScreen
+import com.example.ocr_v3.presentation.camera.PhotoPreview
+import com.example.ocr_v3.presentation.camera.SharedViewModel
 import com.example.ocr_v3.presentation.history.HistoryScreen
 import com.example.ocr_v3.presentation.history.HistoryViewModel
 import com.example.ocr_v3.presentation.scanner.ResultScreen
 import com.example.ocr_v3.presentation.scanner.ScannerViewModel
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -34,29 +44,50 @@ fun AppNavigation() {
     val navBackStackEntry by navControllerOfTheApp.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    val sharedViewModel : SharedViewModel = hiltViewModel()
+    val sviewModel : ScannerViewModel = hiltViewModel()
 
+
+
+    val scope = rememberCoroutineScope()
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
-                NavigationBar {
-                    // 3. This loop actually draws the buttons!
-                    bottomNavItems.forEach { item ->
-                        NavigationBarItem(
-                            icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
-                            label = { Text(text = item.title) },
-                            selected = currentRoute == item.route,
-                            onClick = {
-                                navControllerOfTheApp.navigate(item.route) {
-                                    // 4. THESE THREE LINES PREVENT THE APP FROM GETTING SLOW
-                                    popUpTo(navControllerOfTheApp.graph.findStartDestination().id) {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
+            NavigationBar(
+                containerColor = Color.White,
+                tonalElevation = 0.dp
+            ) {
+                bottomNavItems.forEach { item ->
+                    val isSelected = currentRoute == item.route
+                    NavigationBarItem(
+                        icon = {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = item.title,
+                                tint = if (isSelected) PrimaryPurple else TextGray
+                            )
+                        },
+                        label = {
+                            Text(
+                                text = item.title,
+                                color = if (isSelected) PrimaryPurple else TextGray
+                            )
+                        },
+                        selected = isSelected,
+                        onClick = {
+                            navControllerOfTheApp.navigate(item.route) {
+                                popUpTo(navControllerOfTheApp.graph.findStartDestination().id) {
+                                    saveState = true
                                 }
+                                launchSingleTop = true
+                                restoreState = true
                             }
+                        },
+                        colors = NavigationBarItemDefaults.colors(
+                            indicatorColor = Color.Transparent
                         )
-                    }
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -68,20 +99,30 @@ fun AppNavigation() {
             composable(Routes.HomeScreen) {
                 HomeScreen(context = context, navController = navControllerOfTheApp)
             }
+            composable(Routes.PhotoPreview) {
+                val bitmap by sharedViewModel.photoBitmap.collectAsState()
+
+                PhotoPreview(
+                    onPhotoAccepted = { bitmap ->
+                        scope.launch {
+                            sviewModel.onPhotoAccepted(bitmap)
+                            navControllerOfTheApp.navigate(Routes.ResultScreen)
+                        }
+                    },
+                    navController = navControllerOfTheApp,
+                    sharedViewModel = sharedViewModel,
+                    scannerViewModel = sviewModel
+                )
+            }
             composable(Routes.CameraScreen) {
-                val viewModel: ScannerViewModel = hiltViewModel()
-                CameraScreen(viewModel, navController = navControllerOfTheApp)
+                CameraScreen(sharedViewModel, navController = navControllerOfTheApp)
             }
             composable(Routes.HistoryScreen) {
                 val viewModel: HistoryViewModel = hiltViewModel()
                 HistoryScreen(navControllerOfTheApp, viewModel)
             }
             composable(Routes.ResultScreen) {
-                val cameraBackStackEntry = remember(it) {
-                    navControllerOfTheApp.getBackStackEntry(Routes.CameraScreen)
-                }
-                val viewModel: ScannerViewModel = hiltViewModel(cameraBackStackEntry)
-                ResultScreen(viewModel, navControllerOfTheApp)
+                ResultScreen(sviewModel, navControllerOfTheApp)
             }
 
         }
