@@ -1,6 +1,7 @@
 package com.example.ocr_v3.domain.usecase
 
 import com.example.ocr_v3.domain.model.Card
+import com.example.ocr_v3.domain.model.MrzInfo
 
 class ParseCardUseCase {
 
@@ -97,5 +98,48 @@ class ParseCardUseCase {
         }
 
         return "$day/$month/$fullYear"
+    }
+
+
+     fun extractMrzOnly(textToTrim: String): MrzInfo {
+        val lines = textToTrim.lines()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+
+        var numId = ""
+
+        var birthDate = ""
+        var expirationDate = ""
+
+
+        val mrzLines = lines.filter {
+            it.startsWith("I<MAR") || it.count { char -> char == '<' } > 5
+        }
+
+        if (mrzLines.size >= 3) {
+            // Remove spaces
+            val mrz1 = mrzLines[mrzLines.size - 3].replace(" ", "")
+            val mrz2 = mrzLines[mrzLines.size - 2].replace(" ", "")
+            val mrz3 = mrzLines[mrzLines.size - 1].replace(" ", "")
+
+            val idRegex = Regex("""<(\d)([A-Z0-9\s]+)<""")
+            val match = idRegex.find(mrz1)
+            if (match != null) {
+                // group 1 is the digit, group 2 is the actual ID number
+                numId = match.groupValues[2]
+            }
+
+            // --- Extract Dates (From Line 2) ---
+            // Format: [6-digit DOB][Check][Sex][6-digit Expiry][Check]...
+            if (mrz2.length >= 15) {
+                birthDate = mrz2.substring(0, 6)      // positions 1-6
+                expirationDate = mrz2.substring(8, 14)     // positions 9-14
+            }
+        }
+        return MrzInfo(
+            documentNumber = numId,
+            dateOfBirth = birthDate,
+            dateOfExpiry = expirationDate
+        )
     }
 }

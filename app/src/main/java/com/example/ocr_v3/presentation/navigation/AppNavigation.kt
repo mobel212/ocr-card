@@ -25,12 +25,15 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.ocr_v3.domain.repository.NfcReader
 import com.example.ocr_v3.presentation.HomeScreen
 import com.example.ocr_v3.presentation.camera.CameraScreen
 import com.example.ocr_v3.presentation.camera.PhotoPreview
 import com.example.ocr_v3.presentation.camera.SharedViewModel
 import com.example.ocr_v3.presentation.history.HistoryScreen
 import com.example.ocr_v3.presentation.history.HistoryViewModel
+import com.example.ocr_v3.presentation.nfc.NfcScreen
+import com.example.ocr_v3.presentation.nfc.NfcTestViewModel
 import com.example.ocr_v3.presentation.scanner.ResultScreen
 import com.example.ocr_v3.presentation.scanner.ScannerViewModel
 import kotlinx.coroutines.launch
@@ -46,6 +49,8 @@ fun AppNavigation() {
 
     val sharedViewModel : SharedViewModel = hiltViewModel()
     val sviewModel : ScannerViewModel = hiltViewModel()
+
+    val nfcViewModel : NfcTestViewModel = hiltViewModel()
 
 
 
@@ -123,6 +128,10 @@ fun AppNavigation() {
             }
             composable(Routes.ResultScreen) {
                 ResultScreen(sviewModel, navControllerOfTheApp)
+            }
+
+            composable(Routes.Nfc) {
+                NfcScreen(nfcViewModel)
             }
 
         }

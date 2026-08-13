@@ -24,7 +24,7 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".dev"
+            applicationIdSuffix = ".devnfc"
         }
         release {
             optimization {
@@ -91,6 +91,14 @@ dependencies {
     implementation( "androidx.sqlite:sqlite:2.7.0")
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
+
+    //nfc libraries
+    // JMRTD for ICAO smartcard communication
+    implementation("org.jmrtd:jmrtd:0.7.34")
+    implementation("net.sf.scuba:scuba-sc-android:0.0.26")
+
+    // Bouncy Castle for BAC cryptographic handshake
+    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

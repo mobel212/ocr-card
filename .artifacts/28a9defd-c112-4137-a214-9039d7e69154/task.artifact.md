@@ -1,0 +1,3 @@
+- [x] Implement `sendSelectApplet` call in `NfcReaderImpl.kt`
+- [x] Verify the fix in Logcat/NfcReader logs
+- [x] Create walkthrough summary

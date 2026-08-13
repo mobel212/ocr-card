@@ -9,4 +9,6 @@ object Routes {
 
     val ResultScreen = "result"
     val PhotoPreview = "photopreview"
+
+    val Nfc = "nfc"
 }

@@ -14,6 +14,7 @@ data class BottomNavItem(
 val bottomNavItems = listOf(
     BottomNavItem(title = "Home", route = Routes.HomeScreen, icon = Icons.Default.Home),
     BottomNavItem(title = "Scan", route = Routes.CameraScreen, icon = AppIcons.PhotoCamera),
-    BottomNavItem(title = "History", route = Routes.HistoryScreen, icon = AppIcons.List)
+    BottomNavItem(title = "History", route = Routes.HistoryScreen, icon = AppIcons.List),
+    BottomNavItem(title = "Nfc" , route = Routes.Nfc , icon = AppIcons.RotateRight )
 )
 
