@@ -1,6 +1,0 @@
-- [x] Fix navigation in `HomeScreen.kt` (navbar sync)
-- [x] Stabilize camera lifecycle in `CameraScreen.kt` (prevent crashes)
-- [x] Modernize `CameraScreen.kt` UI (overlay and instructions)
-- [x] Modernize `PhotoPreview.kt` UI (button styles and text)
-- [x] Modernize `ResultScreen.kt` UI (spacing and visual feedback)
-- [x] Verify build and navigation flows
