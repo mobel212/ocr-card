@@ -1,8 +1,0 @@
-- [ ] Update dependencies in `build.gradle.kts`
-    - [ ] Remove `jai-imageio-jpeg2000`
-    - [ ] Add `jp2-android`
-- [ ] Implement JP2 decoding in `NfcReaderImpl.kt`
-    - [ ] Import `com.gemalto.jp2.JP2Decoder`
-    - [ ] Update `streamPhotoToFile` to decode JP2 bytes
-- [ ] Improve NFC connection resilience
-- [ ] Verify photo display in UI
