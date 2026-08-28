@@ -1,4 +1,0 @@
-- [x] Add JMRTD Maven repository to `settings.gradle.kts` (Replaced with using Maven Central version)
-- [x] Sync Gradle project
-- [x] Verify build with `./gradlew :app:assembleDebug`
-- [x] Fix compilation and DI errors caused by library updates

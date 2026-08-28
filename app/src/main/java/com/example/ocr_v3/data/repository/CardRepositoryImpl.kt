@@ -3,6 +3,7 @@ package com.example.ocr_v3.data.repository
 import com.example.ocr_v3.data.local.CardDao
 import com.example.ocr_v3.data.local.CardEntity
 import com.example.ocr_v3.domain.model.Card
+import com.example.ocr_v3.domain.model.ScanType
 import com.example.ocr_v3.domain.repository.CardRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -16,8 +17,11 @@ class CardRepositoryImpl @Inject constructor(private val dao : CardDao) : CardRe
             lastName = card.lastName ,
             birthDate = card.birthDate ,
             expirationDate = card.expirationDate ,
+            documentNumber = card.documentNumber,
             numId = card.numId ,
-            address = card.address
+            address = card.address,
+            faceImagePath = card.faceImagePath,
+            scanType = card.scanType.toString()
         )
         dao.insertCard(entity)
     }
@@ -29,14 +33,16 @@ class CardRepositoryImpl @Inject constructor(private val dao : CardDao) : CardRe
             lastName = card.lastName,
             birthDate = card.birthDate,
             expirationDate = card.expirationDate ,
-            numId = card.numId,
-            address = card.address
+            documentNumber = card.documentNumber,
+            numId = card.numId ,
+            address = card.address,
+            faceImagePath = card.faceImagePath,
+            scanType = card.scanType.toString()
         )
         dao.deleteCard(entity)
     }
 
     override fun getCard(cardId : Int): Flow<Card> {
-
         return dao.getCard(cardId = cardId).map { entity ->
             Card(
                 id = entity.id ,
@@ -44,8 +50,11 @@ class CardRepositoryImpl @Inject constructor(private val dao : CardDao) : CardRe
                 lastName = entity.lastName ,
                 birthDate = entity.birthDate ,
                 expirationDate = entity.expirationDate ,
+                documentNumber = entity.documentNumber,
                 numId = entity.numId ,
-                address = entity.address
+                address = entity.address,
+                faceImagePath = entity.faceImagePath,
+                scanType = ScanType.valueOf(entity.scanType)
             )
         }
     }
@@ -54,13 +63,16 @@ class CardRepositoryImpl @Inject constructor(private val dao : CardDao) : CardRe
         return dao.getCards().map { entities ->
             entities.map { entity ->
                 Card(
-                    id = entity.id ,
-                    firstName = entity.firstName ,
-                    lastName = entity.lastName ,
-                    birthDate = entity.birthDate ,
+                    id = entity.id,
+                    firstName = entity.firstName,
+                    lastName = entity.lastName,
+                    birthDate = entity.birthDate,
                     expirationDate = entity.expirationDate ,
-                    numId = entity.numId ,
-                    address = entity.address
+                    documentNumber = entity.documentNumber,
+                    numId = entity.numId,
+                    address = entity.address,
+                    faceImagePath = entity.faceImagePath,
+                    scanType = ScanType.valueOf(entity.scanType)
                 )
             }
 

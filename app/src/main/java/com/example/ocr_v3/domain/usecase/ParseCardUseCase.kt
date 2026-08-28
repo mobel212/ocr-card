@@ -1,7 +1,7 @@
 package com.example.ocr_v3.domain.usecase
 
 import com.example.ocr_v3.domain.model.Card
-import com.example.ocr_v3.domain.model.MrzInfo
+import com.example.ocr_v3.domain.model.ScanType
 
 class ParseCardUseCase {
 
@@ -11,6 +11,7 @@ class ParseCardUseCase {
             .filter { it.isNotEmpty() }
 
         var numId = ""
+        var documentNumber = ""  // NEW: document number from after IDMAR
         var firstName = ""
         var lastName = ""
         var birthDate = ""
@@ -27,8 +28,9 @@ class ParseCardUseCase {
             }
         }
 
+        // MRZ lines: handle both "I<MAR" and "IDMAR" (OCR misread)
         val mrzLines = lines.filter {
-            it.startsWith("I<MAR") || it.count { char -> char == '<' } > 5
+            it.startsWith("I<MAR") || it.startsWith("IDMAR") || it.count { char -> char == '<' } > 5
         }
 
         if (mrzLines.size >= 3) {
@@ -37,25 +39,37 @@ class ParseCardUseCase {
             val mrz2 = mrzLines[mrzLines.size - 2].replace(" ", "")
             val mrz3 = mrzLines[mrzLines.size - 1].replace(" ", "")
 
+            // --- Extract Document Number (From Line 1) ---
+            // Format: IDMAR[DOCUMENT_NUMBER]<[CHECK_DIGIT][ID_NUMBER]<<<<<<<
+            // Example: IDMARFHE4N2I9<2AB123456<<<<<<<
+            // Document number is "FHE4N2I9"
+            if (mrz1.startsWith("IDMAR")) {
+                documentNumber = mrz1.substringAfter("IDMAR").substringBefore('<')
+            } else if (mrz1.startsWith("I<MAR")) {
+                // Fallback: standard format I<MAR
+                documentNumber = mrz1.substringAfter("I<MAR").substringBefore('<')
+            }
+
+            // --- Extract ID Number (From Line 1) ---
+            // The ID number is after the check digit: <[CHECK_DIGIT][ID_NUMBER]<
+            // Example: <2AB123456< -> ID number is "AB123456"
             val idRegex = Regex("""<(\d)([A-Z0-9\s]+)<""")
             val match = idRegex.find(mrz1)
             if (match != null) {
-                // group 1 is the digit, group 2 is the actual ID number
                 numId = match.groupValues[2]
             }
 
             // --- Extract Dates (From Line 2) ---
-            // Format: [6-digit DOB][Check][Sex][6-digit Expiry][Check]...
             if (mrz2.length >= 15) {
-                val rawDob = mrz2.substring(0, 6)      // positions 1-6
-                val rawExp = mrz2.substring(8, 14)     // positions 9-14
+                val rawDob = mrz2.substring(0, 6)
+                val rawExp = mrz2.substring(8, 14)
 
                 birthDate = formatMrzDate(rawDob, isBirthDate = true)
                 expirationDate = formatMrzDate(rawExp, isBirthDate = false)
             }
 
             // --- Extract Names (From Line 3) ---
-            // Format: LASTNAME<<FIRSTNAME<<...
+            // Handles << or K< (OCR misread)
             val nameParts = mrz3.split(Regex("""[<Kk]<"""))
             if (nameParts.isNotEmpty()) {
                 lastName = nameParts[0].replace("<", " ").trim()
@@ -75,71 +89,11 @@ class ParseCardUseCase {
             birthDate = birthDate,
             expirationDate = expirationDate,
             numId = numId,
-            address = address
+            documentNumber = documentNumber,  // NEW field
+            address = address,
+            scanType = ScanType.OCR
         )
     }
 
-    private fun formatMrzDate(yymmdd: String, isBirthDate: Boolean): String {
-        if (yymmdd.length != 6 || yymmdd.contains("<") || yymmdd.any { !it.isDigit() }) {
-            return yymmdd
-        }
 
-        val yearStr = yymmdd.substring(0, 2)
-        val month = yymmdd.substring(2, 4)
-        val day = yymmdd.substring(4, 6)
-
-        val yearInt = yearStr.toIntOrNull() ?: return yymmdd
-
-        // Birth: years > 30 → 19xx, else 20xx. Expiry: always 20xx.
-        val fullYear = if (isBirthDate) {
-            if (yearInt > 30) "19$yearStr" else "20$yearStr"
-        } else {
-            "20$yearStr"
-        }
-
-        return "$day/$month/$fullYear"
-    }
-
-
-     fun extractMrzOnly(textToTrim: String): MrzInfo {
-        val lines = textToTrim.lines()
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-
-        var numId = ""
-
-        var birthDate = ""
-        var expirationDate = ""
-
-
-        val mrzLines = lines.filter {
-            it.startsWith("I<MAR") || it.count { char -> char == '<' } > 5
-        }
-
-        if (mrzLines.size >= 3) {
-            // Remove spaces
-            val mrz1 = mrzLines[mrzLines.size - 3].replace(" ", "")
-            val mrz2 = mrzLines[mrzLines.size - 2].replace(" ", "")
-            val mrz3 = mrzLines[mrzLines.size - 1].replace(" ", "")
-
-            val idRegex = Regex("""<(\d)([A-Z0-9\s]+)<""")
-            val match = idRegex.find(mrz1)
-            if (match != null) {
-                // group 1 is the digit, group 2 is the actual ID number
-                numId = match.groupValues[2]
-            }
-
-            // --- Extract Dates (From Line 2) ---
-            // Format: [6-digit DOB][Check][Sex][6-digit Expiry][Check]...
-            if (mrz2.length >= 15) {
-                birthDate = mrz2.substring(0, 6)      // positions 1-6
-                expirationDate = mrz2.substring(8, 14)     // positions 9-14
-            }
-        }
-        return MrzInfo(
-            documentNumber = numId,
-            dateOfBirth = birthDate,
-            dateOfExpiry = expirationDate
-        )
-    }
 }

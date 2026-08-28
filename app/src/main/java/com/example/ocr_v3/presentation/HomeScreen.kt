@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -57,6 +58,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.ocr_v3.R
 import com.example.ocr_v3.presentation.history.HistoryViewModel
 import com.example.ocr_v3.presentation.navigation.Routes
+import com.example.ocr_v3.ui.icons.AppIcons
 import com.example.ocr_v3.ui.theme.BackgroundLight
 import com.example.ocr_v3.ui.theme.PrimaryPurple
 import com.example.ocr_v3.ui.theme.TextDark
@@ -70,7 +72,7 @@ fun HomeScreen(
     historyViewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val cards by historyViewModel.cards.collectAsState(initial = emptyList())
-    val latestCards = cards.take(3)
+    val latestCards = cards.take(4)
 
     var hasCameraPermission by remember {
         mutableStateOf(
@@ -184,28 +186,42 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Primary Action: Scan Card
-                Button(
-                    onClick = { navController.navigate(Routes.CameraScreen) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(64.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
-                    shape = RoundedCornerShape(20.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Scan Icon",
-                        modifier = Modifier.size(24.dp),
-                        tint = Color.White
+                    // OCR Action
+                    ActionCard(
+                        title = "OCR Scanner",
+                        description = "Extract text from card back",
+                        icon = AppIcons.PhotoCamera,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            navController.navigate(Routes.CameraScreen) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Scan New Card",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+
+                    // NFC Action
+                    ActionCard(
+                        title = "NFC Reader",
+                        description = "Read chip from CNIe",
+                        icon = AppIcons.Nfc,
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            navController.navigate(Routes.Nfc) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     )
                 }
             }
@@ -273,6 +289,52 @@ fun HomeScreen(
             }
 
 
+        }
+    }
+}
+
+@Composable
+fun ActionCard(
+    title: String,
+    description: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .height(140.dp)
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = title,
+                tint = PrimaryPurple,
+                modifier = Modifier.size(32.dp)
+            )
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark
+                )
+                Text(
+                    text = description,
+                    fontSize = 15.sp,
+                    color = TextGray,
+                    lineHeight = 16.sp
+                )
+            }
         }
     }
 }

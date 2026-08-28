@@ -15,7 +15,7 @@ interface CardDao {
     @Delete
     suspend fun deleteCard(card: CardEntity)
 
-    @Query("SELECT * FROM cards ")
+    @Query("SELECT * FROM cards ORDER BY id DESC")
     fun getCards() : Flow<List<CardEntity>>
 
     @Query("SELECT * FROM cards WHERE id = :cardId ")

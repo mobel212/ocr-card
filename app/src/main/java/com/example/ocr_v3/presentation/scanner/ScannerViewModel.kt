@@ -1,7 +1,6 @@
 package com.example.ocr_v3.presentation.scanner
 
 import android.graphics.Bitmap
-import android.nfc.tech.IsoDep
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -13,7 +12,6 @@ import com.example.ocr_v3.domain.repository.CardRepository
 import com.example.ocr_v3.domain.repository.NfcReader
 import com.example.ocr_v3.domain.usecase.ParseCardUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import javax.inject.Inject
@@ -23,7 +21,7 @@ import kotlin.coroutines.resume
 class ScannerViewModel @Inject constructor(
     private val textRecognizer: TextRecognizer,
     private val parseCardUseCase: ParseCardUseCase,
-    private val cardRepositoryImpl: CardRepository,
+    private val cardRepository: CardRepository,
     private val nfcReader: NfcReader
 ) : ViewModel() {
 
@@ -35,6 +33,13 @@ class ScannerViewModel @Inject constructor(
         val newCard = currentCard.copy(firstName = newOne)
         theState = theState.copy(scannedData = newCard)
     }
+
+    fun onDocNumChanged(newOne : String){
+        val currentCard = theState.scannedData
+        val newCard = currentCard.copy(documentNumber = newOne)
+        theState = theState.copy(scannedData = newCard)
+    }
+
     fun onLastNameChanged(newOne : String){
         val currentCard = theState.scannedData
         val newCard = currentCard.copy(lastName = newOne)
@@ -69,8 +74,7 @@ class ScannerViewModel @Inject constructor(
                 onResult = { text ->
                     Log.e("text extracted", "here the text extracted : $text")
                     val card = parseCardUseCase.invoke(text)
-                    val mrzInfo = parseCardUseCase.extractMrzOnly(text)
-                    theState = theState.copy(scannedData = card, extractedMrzInfo = mrzInfo, isLoading = false)
+                    theState = theState.copy(scannedData = card,  isLoading = false)
                     Log.e("text parsed", "here the text extracted : ${card.toString()}")
                     if (continuation.isActive) continuation.resume(Unit)
                 },
@@ -85,7 +89,7 @@ class ScannerViewModel @Inject constructor(
 
     fun onInfosConfirmed() {
         viewModelScope.launch {
-            cardRepositoryImpl.insertCard(theState.scannedData)
+            cardRepository.insertCard(theState.scannedData)
             theState = theState.copy(isSaved = true)
         }
     }
@@ -94,24 +98,4 @@ class ScannerViewModel @Inject constructor(
         theState = theState.copy(isSaved = false)
     }
 
-    //for nfc
-    fun onNfcTagDiscovered(tag: android.nfc.Tag) {
-        val isoDep = IsoDep.get(tag)
-        if (isoDep != null) {
-            viewModelScope.launch(Dispatchers.IO) {
-                try {
-                    theState = theState.copy(isLoading = true, statusMessage = "Authenticating chip...")
-
-                    // Assuming you already extracted MRZ info via ML Kit earlier
-                    val currentMrz = theState.extractedMrzInfo
-
-                    val nfcCard = nfcReader.readBiometricData(isoDep, null, currentMrz)
-                    theState = theState.copy(scannedData = nfcCard, isLoading = false)
-
-                } catch (e: Exception) {
-                    theState = theState.copy(error = e.message as Error?, isLoading = false)
-                }
-            }
-        }
-    }
 }

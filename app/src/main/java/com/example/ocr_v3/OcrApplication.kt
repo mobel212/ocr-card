@@ -9,10 +9,14 @@ import java.security.Security
 class OcrApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        // 1. Aggressively remove Android's crippled built-in Bouncy Castle
-        Security.removeProvider("BC")
+        try {
+            // 1. Aggressively remove Android's crippled built-in Bouncy Castle
+            Security.removeProvider("BC")
 
-        // 2. Insert the full, powerful Bouncy Castle provider we added in build.gradle
-        Security.insertProviderAt(BouncyCastleProvider(), 1)
+            // 2. Insert the full, powerful Bouncy Castle provider we added in build.gradle
+            Security.insertProviderAt(BouncyCastleProvider(), 1)
+        } catch (t: Throwable) {
+            android.util.Log.e("OcrApplication", "Failed to register BouncyCastle", t)
+        }
     }
 }

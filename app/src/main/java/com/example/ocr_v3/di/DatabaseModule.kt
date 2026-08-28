@@ -39,15 +39,16 @@ object DatabaseModule {
                     name = "cards"
                 )
                     .openHelperFactory(factory)
+                    .fallbackToDestructiveMigration()
                     .build()
 
-                // Optional: wipe passphrase from memory after Room opens
-                keyManager.wipePassphrase(result.passphrase)
                 db
             }
 
             DatabaseKeyResult.RecoveryNeeded -> {
-                // The Keystore key was invalidated. Delete the unreadable DB.
+                // The Keystore key was invalidated or mismatched from backup. 
+                // Wipe all old material and delete the unreadable DB.
+                keyManager.wipeAllKeyMaterial()
                 context.deleteDatabase("cards")
 
                 // Retry once after cleanup
@@ -63,6 +64,7 @@ object DatabaseModule {
                     name = "cards"
                 )
                     .openHelperFactory(factory)
+                    .fallbackToDestructiveMigration()
                     .build()
             }
         }

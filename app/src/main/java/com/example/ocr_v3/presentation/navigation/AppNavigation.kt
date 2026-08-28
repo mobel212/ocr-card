@@ -2,30 +2,19 @@ package com.example.ocr_v3.presentation.navigation
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.example.ocr_v3.ui.theme.PrimaryPurple
-import com.example.ocr_v3.ui.theme.TextGray
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.ocr_v3.domain.repository.NfcReader
 import com.example.ocr_v3.presentation.HomeScreen
 import com.example.ocr_v3.presentation.camera.CameraScreen
 import com.example.ocr_v3.presentation.camera.PhotoPreview
@@ -36,8 +25,9 @@ import com.example.ocr_v3.presentation.nfc.NfcScreen
 import com.example.ocr_v3.presentation.nfc.NfcTestViewModel
 import com.example.ocr_v3.presentation.scanner.ResultScreen
 import com.example.ocr_v3.presentation.scanner.ScannerViewModel
+import com.example.ocr_v3.ui.theme.PrimaryPurple
+import com.example.ocr_v3.ui.theme.TextGray
 import kotlinx.coroutines.launch
-
 
 @Composable
 fun AppNavigation() {
@@ -45,14 +35,11 @@ fun AppNavigation() {
     val context = LocalContext.current
 
     val navBackStackEntry by navControllerOfTheApp.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route
+    val currentDestination = navBackStackEntry?.destination
 
     val sharedViewModel : SharedViewModel = hiltViewModel()
     val sviewModel : ScannerViewModel = hiltViewModel()
-
     val nfcViewModel : NfcTestViewModel = hiltViewModel()
-
-
 
     val scope = rememberCoroutineScope()
     Scaffold(
@@ -63,7 +50,7 @@ fun AppNavigation() {
                 tonalElevation = 0.dp
             ) {
                 bottomNavItems.forEach { item ->
-                    val isSelected = currentRoute == item.route
+                    val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
                     NavigationBarItem(
                         icon = {
                             Icon(
@@ -80,12 +67,14 @@ fun AppNavigation() {
                         },
                         selected = isSelected,
                         onClick = {
-                            navControllerOfTheApp.navigate(item.route) {
-                                popUpTo(navControllerOfTheApp.graph.findStartDestination().id) {
-                                    saveState = true
+                            if (navControllerOfTheApp.currentDestination?.route != item.route) {
+                                navControllerOfTheApp.navigate(item.route) {
+                                    popUpTo(navControllerOfTheApp.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         colors = NavigationBarItemDefaults.colors(
@@ -129,11 +118,9 @@ fun AppNavigation() {
             composable(Routes.ResultScreen) {
                 ResultScreen(sviewModel, navControllerOfTheApp)
             }
-
             composable(Routes.Nfc) {
-                NfcScreen(nfcViewModel)
+                NfcScreen(navController = navControllerOfTheApp, viewModel = nfcViewModel)
             }
-
         }
     }
 }

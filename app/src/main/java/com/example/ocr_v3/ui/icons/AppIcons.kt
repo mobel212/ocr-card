@@ -192,4 +192,52 @@ object AppIcons {
             curveTo(16.77f, 13.88f, 16.43f, 14.73f, 15.89f, 15.48f)
             close()
         }.build()
+
+    val Nfc: ImageVector
+        get() = ImageVector.Builder(
+            name = "Nfc",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).path(fill = SolidColor(Color.Black)) {
+            moveTo(4f, 20f)
+            horizontalLineToRelative(16f)
+            curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
+            verticalLineTo(6f)
+            curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
+            horizontalLineTo(4f)
+            curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
+            verticalLineToRelative(12f)
+            curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
+            close()
+            moveTo(4f, 6f)
+            horizontalLineToRelative(16f)
+            verticalLineToRelative(12f)
+            horizontalLineTo(4f)
+            verticalLineTo(6f)
+            close()
+            moveTo(18f, 8f)
+            horizontalLineToRelative(-2f)
+            verticalLineToRelative(8f)
+            horizontalLineToRelative(2f)
+            verticalLineTo(8f)
+            close()
+            moveTo(9.25f, 8f)
+            curveToRelative(-1.1f, 0f, -2f, 0.9f, -2f, 2f)
+            verticalLineToRelative(4f)
+            curveToRelative(0f, 1.1f, 0.9f, 2f, 2f, 2f)
+            horizontalLineToRelative(3.5f)
+            curveToRelative(1.1f, 0f, 2f, -0.9f, 2f, -2f)
+            verticalLineToRelative(-4f)
+            curveToRelative(0f, -1.1f, -0.9f, -2f, -2f, -2f)
+            horizontalLineToRelative(-3.5f)
+            close()
+            moveTo(12.75f, 14f)
+            horizontalLineToRelative(-3.5f)
+            verticalLineToRelative(-4f)
+            horizontalLineToRelative(3.5f)
+            verticalLineToRelative(4f)
+            close()
+        }.build()
 }

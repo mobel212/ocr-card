@@ -1,14 +1,9 @@
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
+        maven { url = uri("https://jitpack.io") }
     }
 }
 plugins {
@@ -19,9 +14,15 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+        maven {
+            url = uri("http://maven.scuba-sc.org/repository/maven-public/")
+            isAllowInsecureProtocol = true
+        }
+        maven { url = uri("https://nexus.isofirm.com/repository/maven-public/") }
+        maven { url = uri("https://repository.aspose.com/repo/") }
     }
 }
 
 rootProject.name = "ocr-v3"
 include(":app")
- 

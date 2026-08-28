@@ -71,15 +71,12 @@ class DatabaseKeyManager(context: Context) {
     fun getDatabasePassphrase(): DatabaseKeyResult {
         return try {
             loadOrCreatePassphrase()
-//        } catch (e: javax.crypto) {
-//            DatabaseKeyResult.RecoveryNeeded
-        } catch (e: AEADBadTagException) {
-            DatabaseKeyResult.RecoveryNeeded
-        } catch (e: javax.crypto.BadPaddingException) {
+        } catch (e: Exception) {
+            // Any failure to decrypt or generate keys should trigger recovery.
+            // This includes AEADBadTagException (key changed),
+            // UnrecoverableKeyException, etc.
             DatabaseKeyResult.RecoveryNeeded
         }
-        // Everything else (NullPointerException, OutOfMemoryError, etc.)
-        // propagates up and crashes during development so you notice the bug.
     }
 
     /**

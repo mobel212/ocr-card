@@ -1,7 +1,7 @@
 package com.example.ocr_v3.presentation.scanner
 
 import com.example.ocr_v3.domain.model.Card
-import com.example.ocr_v3.domain.model.MrzInfo
+import com.example.ocr_v3.domain.model.ScanType
 
 
 data class ScannerState(
@@ -12,14 +12,11 @@ data class ScannerState(
         lastName = "",
         birthDate = "",
         expirationDate = "",
+        documentNumber = "",
         numId = "",
-        address = ""
+        address = "",
+        scanType = ScanType.OCR
     ),
     val error: Error? = null ,
     val statusMessage : String = "" ,
-    val extractedMrzInfo: MrzInfo = MrzInfo(
-        documentNumber = "",
-        dateOfBirth = "" ,
-        dateOfExpiry = ""
-    )
 )

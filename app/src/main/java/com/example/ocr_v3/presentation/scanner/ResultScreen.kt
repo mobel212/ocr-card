@@ -1,6 +1,5 @@
 package com.example.ocr_v3.presentation.scanner
 
-import android.content.ClipData
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,50 +8,44 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ClipEntry
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import com.example.ocr_v3.domain.model.ScanType
+import com.example.ocr_v3.presentation.components.InfoCard
+import com.example.ocr_v3.presentation.components.ScanTypeTag
 import com.example.ocr_v3.presentation.navigation.Routes
-import com.example.ocr_v3.ui.icons.AppIcons
 import com.example.ocr_v3.ui.theme.BackgroundLight
 import com.example.ocr_v3.ui.theme.PrimaryPurple
 import com.example.ocr_v3.ui.theme.TextDark
-import com.example.ocr_v3.ui.theme.TextGray
-import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultScreen(
     viewModel: ScannerViewModel,
     navController: NavController
 ) {
     val state = viewModel.theState
-    val clipboard = LocalClipboard.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
 
@@ -65,6 +58,20 @@ fun ResultScreen(
     }
 
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Scan Result", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.White,
+                    titleContentColor = TextDark
+                )
+            )
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = BackgroundLight
     ) { innerPadding ->
@@ -76,57 +83,64 @@ fun ResultScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Scan Result",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextDark,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Summary",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark
+                )
+                ScanTypeTag(scanType = state.scannedData.scanType)
+            }
 
             // Data Fields
-            EditableInfoCard(
+            InfoCard(
                 label = "First Name",
                 value = state.scannedData.firstName,
-                onValueChange = { viewModel.onFirstNameChanged(it) },
-                clipboard = clipboard
+                onValueChange = { viewModel.onFirstNameChanged(it) }
             )
 
-            EditableInfoCard(
+            InfoCard(
                 label = "Last Name",
                 value = state.scannedData.lastName,
-                onValueChange = { viewModel.onLastNameChanged(it) },
-                clipboard = clipboard
+                onValueChange = { viewModel.onLastNameChanged(it) }
             )
 
-            EditableInfoCard(
+            InfoCard(
                 label = "ID Number",
                 value = state.scannedData.numId,
-                onValueChange = { viewModel.onNumIdChanged(it) },
-                clipboard = clipboard
+                onValueChange = { viewModel.onNumIdChanged(it) }
             )
 
-            EditableInfoCard(
+            InfoCard(
                 label = "Birth Date",
                 value = state.scannedData.birthDate,
-                onValueChange = { viewModel.onbirthDateChanged(it) },
-                clipboard = clipboard
+                onValueChange = { viewModel.onbirthDateChanged(it) }
             )
 
-            EditableInfoCard(
+            InfoCard(
                 label = "Expiration Date",
                 value = state.scannedData.expirationDate,
-                onValueChange = { viewModel.onExpDateChanged(it) },
-                clipboard = clipboard
+                onValueChange = { viewModel.onExpDateChanged(it) }
             )
+            if (state.scannedData.scanType == ScanType.OCR) {
+                InfoCard(
+                    label = "Address",
+                    value = state.scannedData.address ?: " ",
+                    onValueChange = { viewModel.onAddressChanged(it) }
+                )
+            }
 
-            EditableInfoCard(
-                label = "Address",
-                value = state.scannedData.address,
-                onValueChange = { viewModel.onAddressChanged(it) },
-                clipboard = clipboard
+            InfoCard(
+                label = "Document number",
+                value = state.scannedData.documentNumber,
+                onValueChange = { viewModel.onDocNumChanged(it) }
             )
-
+            
             Spacer(modifier = Modifier.height(16.dp))
 
             // Action Buttons
@@ -135,14 +149,22 @@ fun ResultScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple ),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Text("Confirm & Save", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text("Confirm & Save", fontSize = 18.sp, fontWeight = FontWeight.SemiBold , color = BackgroundLight)
             }
 
             Button(
-                onClick = { navController.navigate(Routes.CameraScreen) },
+                onClick = {
+                    navController.navigate(Routes.CameraScreen) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -152,75 +174,7 @@ fun ResultScreen(
                 ),
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Text("Scan Again", fontSize = 16.sp, fontWeight = FontWeight.Medium)
-            }
-        }
-    }
-}
-
-@Composable
-fun EditableInfoCard(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    clipboard: androidx.compose.ui.platform.Clipboard
-) {
-    val scope = rememberCoroutineScope()
-    
-    Surface(
-        color = Color.White,
-        shape = RoundedCornerShape(16.dp),
-        shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    fontSize = 12.sp,
-                    color = TextGray,
-                    fontWeight = FontWeight.Medium
-                )
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    textStyle = TextStyle(
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextDark
-                    ),
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        cursorColor = PrimaryPurple
-                    ),
-                    singleLine = true
-                )
-            }
-
-            IconButton(
-                onClick = {
-                    if (value.isNotEmpty()) {
-                        scope.launch {
-                            val clipData = ClipData.newPlainText(label, value)
-                            clipboard.setClipEntry(ClipEntry(clipData))
-                        }
-                    }
-                },
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = AppIcons.ContentCopy,
-                    contentDescription = "Copy $label",
-                    tint = PrimaryPurple.copy(alpha = 0.7f),
-                    modifier = Modifier.size(20.dp)
-                )
+                Text("Scan Again", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }

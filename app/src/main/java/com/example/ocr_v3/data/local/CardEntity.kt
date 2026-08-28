@@ -10,10 +10,12 @@ data class CardEntity (
     val firstName : String ,
     val lastName : String ,
     val birthDate : String ,
+    val documentNumber: String ,
     val expirationDate : String ,
     val numId : String ,
-    val address : String
-
+    val address : String? ,
+    val faceImagePath : String? ,
+    val scanType : String
 ) {
 
 }

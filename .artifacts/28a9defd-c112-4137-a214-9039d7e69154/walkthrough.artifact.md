@@ -1,24 +1,26 @@
-# Walkthrough - Fixed NFC Error 6987
+# Walkthrough - Splash Screen Fix
 
-The NFC error `6987 (EXPECTED SM DATA OBJECTS MISSING)` occurred because the application was attempting to read data from the card using a plaintext channel after a Secure Messaging session (PACE) had already been established.
+I have fixed the issue where the splash screen was not appearing during app launch.
 
 ## Changes Made
 
-### NFC Data Layer
+### 1. Android Manifest Fix
+- **[AndroidManifest.xml](file:///C:/Users/hp/AndroidStudioProjects/ocrv3/app/src/main/AndroidManifest.xml)**: Changed the `android:theme` of `MainActivity` from `@style/Theme.Ocrv3` to `@style/Theme.App.Starting`.
+- **Why?**: The system launcher uses the theme defined for the launcher activity in the manifest to show the splash screen. By pointing it to the splash theme, the system now knows to display the background and icon you configured.
 
-#### [NfcReaderImpl.kt](file:///C:/Users/hp/AndroidStudioProjects/ocrv3/app/src/main/java/com/example/ocr_v3/data/nfc/NfcReaderImpl.kt)
+### 2. Icon Optimization
+- **[app_icon.xml](file:///C:/Users/hp/AndroidStudioProjects/ocrv3/app/src/main/res/drawable/app_icon.xml)**: Resized the icon to **108dp x 108dp** with the content centered in a 72dp area.
+- **Why?**: Android's Splash Screen API requires icons to follow specific sizing (108dp total) to ensure they are properly centered and not clipped. The previous 24dp size was too small and may have contributed to it appearing as "nothing".
 
-- Added the missing `passportService.sendSelectApplet(true)` call after successful PACE authentication.
-- This transitions the `PassportService` from the Master File context to the ICAO Application context using the established Secure Messaging wrapper.
-- By selecting the applet with SM enabled, JMRTD correctly uses Short File Identifiers (SFI) and wraps all subsequent commands (like `READ BINARY`) in Secure Messaging data objects, satisfying the card's security requirements.
+### 3. Theme Cleanup
+- **[themes.xml](file:///C:/Users/hp/AndroidStudioProjects/ocrv3/app/src/main/res/values/themes.xml)**: Ensured `postSplashScreenTheme` is correctly pointing to your main app theme and that the background colors match for a seamless transition.
 
-## Verification Results
+## Verification
 
-### Logcat Analysis
-Previously, the logs would show a failure immediately after PACE when trying to access `EF_DG1`. With this change, the sequence will be:
-1. PACE Authentication Successful.
-2. Selecting ICAO Applet (using SM).
-3. Reading Data Group 1 (using SM + SFI).
+To verify the fix:
+1. **Cold Start**: Force stop the app and launch it again from the app drawer.
+2. You should immediately see the light background (`#f6f7fd`) with your custom icon in the center.
+3. The app will then transition smoothly to your main screen.
 
 > [!TIP]
-> This fix is specifically required for modern ePassports and ID cards (like the Moroccan CNIE v2) which enforce strict Secure Messaging once a session is established.
+> The splash screen only appears on **Cold Starts**. If you just minimize the app and re-open it, you won't see the splash screen again as the process is already running.

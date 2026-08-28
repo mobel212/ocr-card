@@ -1,55 +1,71 @@
 package com.example.ocr_v3.data.nfc
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.nfc.tech.IsoDep
-import android.util.Base64
 import android.util.Log
+import com.gemalto.jp2.JP2Decoder
 import com.example.ocr_v3.domain.model.Card
-import com.example.ocr_v3.domain.model.MrzInfo
+import com.example.ocr_v3.domain.model.ScanType
 import com.example.ocr_v3.domain.repository.NfcReader
+import com.example.ocr_v3.domain.usecase.formatMrzDate
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
 import net.sf.scuba.smartcards.CardService
-import org.jmrtd.BACKey
 import org.jmrtd.PassportService
 import org.jmrtd.PACEKeySpec
 import org.jmrtd.lds.CardAccessFile
 import org.jmrtd.lds.LDSFileUtil
 import org.jmrtd.lds.PACEInfo
 import org.jmrtd.lds.icao.DG1File
-import org.jmrtd.lds.icao.DG11File
-import org.jmrtd.lds.icao.DG12File
-import org.jmrtd.lds.icao.DG14File
-import org.jmrtd.lds.icao.DG15File
+import java.io.File
+import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
-class NfcReaderImpl @Inject constructor() : NfcReader {
+class NfcReaderImpl @Inject constructor(
+    @ApplicationContext private val context: Context
+) : NfcReader {
 
-    private val TEST_CAN = "131883"
-    private val TEST_MRZ = MrzInfo(
-        documentNumber = "EA1234567",
-        dateOfBirth = "950415",
-        dateOfExpiry = "300414"
-    )
+    override suspend fun readBiometricData(isoDep: IsoDep, can: String): Card {
+        Log.i("NfcReader", "NFC Session Started")
+        Log.i("NfcReader", "CAN: ${can.mask()}")
 
-    override suspend fun readBiometricData(isoDep: IsoDep, can: String?, mrzInfo: MrzInfo?): Card {
-        isoDep.timeout = 15000
-        val cardService = CardService.getInstance(isoDep)
-        val passportService = PassportService(cardService,
-            PassportService.NORMAL_MAX_TRANCEIVE_LENGTH,
-            PassportService.DEFAULT_MAX_BLOCKSIZE,
-            false,
-            false)
-
+        var passportService: PassportService? = null
         try {
-            passportService.open()
-            Log.i("NfcReader", "╔══════════════════════════════════════════════════════╗")
-            Log.i("NfcReader", "║         MOROCCAN CNIE NFC READ SESSION START         ║")
-            Log.i("NfcReader", "╚══════════════════════════════════════════════════════╝")
+            if (!isoDep.isConnected) {
+                isoDep.connect()
+            }
+            isoDep.timeout = 30000 // 30 seconds for biometric photo transfer
 
-            // ── PACE ──
+            val cardService = CardService.getInstance(isoDep)
+            
+            // Detect Extended Length support
+            val maxTransceiveLength = isoDep.maxTransceiveLength
+            val isExtendedLengthSupported = maxTransceiveLength > 256
+            
+            Log.d("NfcReader", "Max Transceive Length: $maxTransceiveLength, Extended Length Support: $isExtendedLengthSupported")
+
+            passportService = PassportService(
+                cardService,
+                if (isExtendedLengthSupported) maxTransceiveLength else PassportService.NORMAL_MAX_TRANCEIVE_LENGTH,
+                if (isExtendedLengthSupported) maxTransceiveLength else PassportService.DEFAULT_MAX_BLOCKSIZE,
+                isExtendedLengthSupported,
+                false
+            )
+
+            passportService.open()
+            Log.d("NfcReader", "[1/5] PassportService opened")
+
+            // PACE with CAN
             val paceInfo = try {
-                val cardAccessStream = passportService.getInputStream(PassportService.EF_CARD_ACCESS)
-                val cardAccessFile = CardAccessFile(cardAccessStream)
-                cardAccessStream.close()
-                cardAccessFile.securityInfos.firstOrNull { it is PACEInfo } as? PACEInfo
+                val stream = passportService.getInputStream(PassportService.EF_CARD_ACCESS)
+                val file = CardAccessFile(stream)
+                stream.close()
+                file.securityInfos.firstOrNull { it is PACEInfo } as? PACEInfo
             } catch (e: Exception) {
                 Log.w("NfcReader", "EF_CARD_ACCESS failed: ${e.message}")
                 null
@@ -58,7 +74,7 @@ class NfcReaderImpl @Inject constructor() : NfcReader {
             var paceSucceeded = false
             if (paceInfo != null) {
                 try {
-                    val paceKey = PACEKeySpec.createCANKey(TEST_CAN)
+                    val paceKey = PACEKeySpec.createCANKey(can.trim())
                     passportService.doPACE(
                         paceKey,
                         paceInfo.objectIdentifier,
@@ -66,281 +82,194 @@ class NfcReaderImpl @Inject constructor() : NfcReader {
                         paceInfo.parameterId
                     )
                     paceSucceeded = true
-                    Log.i("NfcReader", "✅ PACE SUCCESS")
+                    Log.i("NfcReader", "PACE Authentication Success")
                 } catch (e: Exception) {
-                    Log.e("NfcReader", "❌ PACE FAILED: ${e.message}")
+                    Log.e("NfcReader", "PACE Failed: ${e.message}")
+                    throw e // CAN is required, no fallback
                 }
             }
 
             passportService.sendSelectApplet(paceSucceeded)
+            Log.d("NfcReader", "Applet selected")
 
-            // BAC fallback
-            if (!paceSucceeded) {
-                try {
-                    passportService.getInputStream(PassportService.EF_COM).read()
-                } catch (e: Exception) {
-                    val bacKey = BACKey(TEST_MRZ.documentNumber, TEST_MRZ.dateOfBirth, TEST_MRZ.dateOfExpiry)
-                    passportService.doBAC(bacKey)
-                    Log.i("NfcReader", "✅ BAC SUCCESS")
-                }
-            }
+            // Ensure connection before reading DG1
+            ensureConnected(isoDep)
 
-            // ═══════════════════════════════════════════════════════
-            // READ ALL DATA GROUPS — each wrapped in try/catch
-            // ═══════════════════════════════════════════════════════
+            // Read DG1 (essential data)
+            Log.d("NfcReader", "Reading DG1...")
+            val dg1Stream = passportService.getInputStream(PassportService.EF_DG1)
+            val dg1File = LDSFileUtil.getLDSFile(PassportService.EF_DG1, dg1Stream) as DG1File
+            dg1Stream.close()
+            val mrz = dg1File.mrzInfo
 
-            // DG1
-            val dg1File = readDG1(passportService)
+            Log.i("NfcReader", "DG1 Data read successfully : ${mrz.toString()}")
+            Log.i("NfcReader", "Doc Number : ${mrz.documentNumber}")
+            Log.i("NfcReader", "Last Name  : ${mrz.primaryIdentifier?.replace("<", " ")}")
+            Log.i("NfcReader", "First Name : ${mrz.secondaryIdentifier?.replace("<", " ")}")
+            Log.i("NfcReader", "Birth Date : ${mrz.dateOfBirth}")
+            Log.i("NfcReader", "Expiry     : ${mrz.dateOfExpiry}")
 
-            // DG2
-            val faceImageBytes = readDG2(passportService)
+            // Ensure connection before reading DG2
+            ensureConnected(isoDep)
 
-            // DG11
-            readDG11(passportService)
+            // Read DG2 and stream directly to file
+            Log.d("NfcReader", "Reading DG2...")
+            val photoPath = streamPhotoToFile(isoDep, passportService, mrz.documentNumber ?: "unknown")
 
-            // DG12
-            readDG12(passportService)
-
-            // DG14
-            readDG14(passportService)
-
-            // DG15
-            readDG15(passportService)
-
-            // SOD
-            readSOD(passportService)
-
-            Log.i("NfcReader", "╔══════════════════════════════════════════════════════╗")
-            Log.i("NfcReader", "║              ALL DATA GROUPS READ COMPLETE           ║")
-            Log.i("NfcReader", "╚══════════════════════════════════════════════════════╝")
+            Log.i("NfcReader", "Session Complete")
+            Log.i("NfcReader", "Photo: $photoPath")
 
             return Card(
                 id = 0,
-                firstName = dg1File?.secondaryIdentifier?.replace("<", " ")?.trim() ?: "",
-                lastName = dg1File?.primaryIdentifier?.replace("<", " ")?.trim() ?: "",
-                birthDate = dg1File?.dateOfBirth ?: "",
-                expirationDate = dg1File?.dateOfExpiry ?: "",
-                numId = dg1File?.documentNumber ?: "",
-                address = faceImageBytes?.size?.let { "Photo: $it bytes" } ?: ""
+                firstName = mrz.secondaryIdentifier?.replace("<", " ")?.trim() ?: "",
+                lastName = mrz.primaryIdentifier?.replace("<", " ")?.trim() ?: "",
+                birthDate = formatMrzDate(mrz.dateOfBirth , true) ?: "",
+                expirationDate = formatMrzDate(mrz.dateOfExpiry , false) ?: "",
+                documentNumber = mrz.documentNumber,
+                numId = mrz.personalNumber ?: "",
+                address = "",
+                faceImagePath = photoPath ,
+                scanType = ScanType.NFC
             )
 
-        } catch (e: Exception) {
-            Log.e("NfcReader", "❌ FATAL ERROR: ${e.message}", e)
+        } catch (e: Throwable) {
+            Log.e("NfcReader", "FATAL ERROR: ${e.message}", e)
+            val errorMessage = when (e) {
+                is android.nfc.TagLostException -> "Tag lost. Keep the card steady."
+                else -> e.message ?: "Unknown error"
+            }
             return Card(
                 id = 0,
                 firstName = "ERROR",
-                lastName = e.message ?: "Unknown",
+                lastName = errorMessage,
                 birthDate = "",
                 expirationDate = "",
+                documentNumber = "",
                 numId = "",
-                address = ""
+                address = "" ,
+                scanType = ScanType.OCR
             )
         } finally {
-            try { passportService.close() } catch (_: Exception) {}
-            Log.i("NfcReader", "=== NFC SESSION CLOSED ===")
+            try { 
+                passportService?.close() 
+            } catch (t: Throwable) {
+                Log.e("NfcReader", "Error closing PassportService", t)
+            }
+            try { 
+                if (isoDep.isConnected) isoDep.close() 
+            } catch (t: Throwable) {
+                Log.e("NfcReader", "Error closing IsoDep", t)
+            }
+            Log.d("NfcReader", "PassportService and IsoDep cleanup complete")
         }
     }
 
-    // ═══════════════════════════════════════════════════════
-    // DG1: MRZ DATA
-    // ═══════════════════════════════════════════════════════
-    private fun readDG1(service: PassportService): org.jmrtd.lds.icao.MRZInfo? {
+    private suspend fun streamPhotoToFile(isoDep: IsoDep, service: PassportService, docNumber: String): String? {
         return try {
-            val stream = service.getInputStream(PassportService.EF_DG1)
-            val dg1 = LDSFileUtil.getLDSFile(PassportService.EF_DG1, stream) as DG1File
-            stream.close()
-
-            val mrz = dg1.mrzInfo
-
-            Log.i("NfcReader", "┌─────────────────────────────────────┐")
-            Log.i("NfcReader", "│  DG1 - MRZ DATA                     │")
-            Log.i("NfcReader", "├─────────────────────────────────────┤")
-            Log.i("NfcReader", "│ Document Number : ${mrz.documentNumber}")
-            Log.i("NfcReader", "│ Last Name       : ${mrz.primaryIdentifier?.replace("<", " ")}")
-            Log.i("NfcReader", "│ First Name      : ${mrz.secondaryIdentifier?.replace("<", " ")}")
-            Log.i("NfcReader", "│ Date of Birth   : ${mrz.dateOfBirth}")
-            Log.i("NfcReader", "│ Gender          : ${mrz.gender}")
-            Log.i("NfcReader", "│ Nationality     : ${mrz.nationality}")
-            Log.i("NfcReader", "│ Date of Expiry  : ${mrz.dateOfExpiry}")
-            Log.i("NfcReader", "│ Issuing State   : ${mrz.issuingState}")
-            Log.i("NfcReader", "│ Optional Data 1 : ${mrz.optionalData1}")
-            Log.i("NfcReader", "│ Optional Data 2 : ${mrz.optionalData2 ?: "N/A"}")
-            Log.i("NfcReader", "│ Personal Number : ${mrz.personalNumber ?: "N/A"}")
-            Log.i("NfcReader", "└─────────────────────────────────────┘")
-
-            mrz
-        } catch (e: Exception) {
-            Log.e("NfcReader", "❌ DG1 failed: ${e.message}")
-            null
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // DG2: PORTRAIT PHOTO
-    // ═══════════════════════════════════════════════════════
-    private fun readDG2(service: PassportService): ByteArray? {
-        return try {
+            ensureConnected(isoDep)
             val stream = service.getInputStream(PassportService.EF_DG2)
             val dg2 = LDSFileUtil.getLDSFile(PassportService.EF_DG2, stream) as org.jmrtd.lds.icao.DG2File
-            stream.close()
 
-            val faceInfos = dg2.faceInfos
-            Log.i("NfcReader", "┌─────────────────────────────────────┐")
-            Log.i("NfcReader", "│  DG2 - PORTRAIT PHOTO               │")
-            Log.i("NfcReader", "├─────────────────────────────────────┤")
-            Log.i("NfcReader", "│ FaceInfo count  : ${faceInfos.size}")
+            var savedPath: String? = null
 
-            var photoBytes: ByteArray? = null
+            dg2.faceInfos.forEach { faceInfo ->
+                faceInfo.faceImageInfos.forEach { imgInfo ->
+                    val mimeType = imgInfo.mimeType
+                    Log.i("NfcReader", "  Photo: MimeType=$mimeType, Size=${imgInfo.imageLength}")
 
-            faceInfos.forEachIndexed { index, faceInfo ->
-                val faceImageInfos = faceInfo.faceImageInfos
-                Log.i("NfcReader", "│ FaceInfo[$index] images: ${faceImageInfos.size}")
+                    val imageBytes = imgInfo.imageInputStream.readBytes()
+                    val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+                    val isJp2 = mimeType.contains("jp2", ignoreCase = true) || mimeType.contains("jpx", ignoreCase = true)
+                    
+                    val dir = File(context.filesDir, "cnie_photos")
+                    if (!dir.exists()) dir.mkdirs()
 
-                faceImageInfos.forEach { imgInfo ->
-                    photoBytes = imgInfo.imageInputStream.readBytes()
-                    Log.i("NfcReader", "│ ├─ Image Size    : ${photoBytes?.size} bytes")
-                    Log.i("NfcReader", "│ ├─ Width x Height: ${imgInfo.width} x ${imgInfo.height}")
-                    Log.i("NfcReader", "│ ├─ Gender        : ${imgInfo.gender}")
-                    Log.i("NfcReader", "│ ├─ Eye Color     : ${imgInfo.eyeColor}")
-                    Log.i("NfcReader", "│ ├─ Hair Color    : ${imgInfo.hairColor}")
-                    Log.i("NfcReader", "│ ├─ Expression    : ${imgInfo.expression}")
-                    Log.i("NfcReader", "│ ├─ Face Image Type: ${imgInfo.faceImageType}")
-                    Log.i("NfcReader", "│ ├─ Source Type   : ${imgInfo.sourceType}")
-                    Log.i("NfcReader", "│ ├─ Feature Points: ${imgInfo.featurePoints.size}")
-                    Log.i("NfcReader", "│ └─ Image Format  : ${detectImageFormat(photoBytes)}")
-
-                    val base64 = Base64.encodeToString(photoBytes, Base64.DEFAULT)
-                    Log.i("NfcReader", "│ Photo Base64 (first 100 chars): ${base64.take(100)}...")
+                    if (isJp2) {
+                        try {
+                            Log.i("NfcReader", "  Decoding JP2 image...")
+                            val bitmap = JP2Decoder(imageBytes).decode()
+                            val fileName = "cnie_${docNumber}_${timestamp}.jpg"
+                            val file = File(dir, fileName)
+                            
+                            FileOutputStream(file).use { out ->
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                            }
+                            
+                            savedPath = file.absolutePath
+                            Log.i("NfcReader", "  JP2 decoded and saved as JPEG: $savedPath")
+                            bitmap.recycle()
+                        } catch (e: Throwable) {
+                            Log.e("NfcReader", "  Failed to decode JP2: ${e.message}", e)
+                            // Fallback: save raw bytes as .jp2 so user can check externally
+                            val fileName = "cnie_${docNumber}_${timestamp}.jp2"
+                            val file = File(dir, fileName)
+                            file.writeBytes(imageBytes)
+                            savedPath = file.absolutePath
+                            Log.w("NfcReader", "  Saved raw JP2 as fallback: $savedPath")
+                        }
+                    } else {
+                        val fileName = "cnie_${docNumber}_${timestamp}.jpg"
+                        val file = File(dir, fileName)
+                        file.writeBytes(imageBytes)
+                        compressIfOversized(file)
+                        savedPath = file.absolutePath
+                        Log.i("NfcReader", "  Photo saved to $savedPath")
+                    }
                 }
             }
-
-            Log.i("NfcReader", "└─────────────────────────────────────┘")
-            photoBytes
-        } catch (e: Exception) {
-            Log.e("NfcReader", "❌ DG2 failed: ${e.message}")
+            stream.close()
+            savedPath
+        } catch (e: Throwable) {
+            Log.e("NfcReader", "DG2 stream failed: ${e.message}")
             null
         }
     }
 
-    // ═══════════════════════════════════════════════════════
-    // DG11: ADDITIONAL PERSONAL DETAILS
-    // ═══════════════════════════════════════════════════════
-    private fun readDG11(service: PassportService) {
-        try {
-            val stream = service.getInputStream(PassportService.EF_DG11)
-            val dg11 = LDSFileUtil.getLDSFile(PassportService.EF_DG11, stream) as DG11File
-            stream.close()
-
-            Log.i("NfcReader", "┌─────────────────────────────────────┐")
-            Log.i("NfcReader", "│  DG11 - ADDITIONAL PERSONAL DETAILS │")
-            Log.i("NfcReader", "├─────────────────────────────────────┤")
-            Log.i("NfcReader", "│ Place of Birth  : ${dg11.placeOfBirth ?: "N/A"}")
-            Log.i("NfcReader", "│ Profession      : ${dg11.profession ?: "N/A"}")
-            Log.i("NfcReader", "│ Title           : ${dg11.title ?: "N/A"}")
-            Log.i("NfcReader", "│ Personal Summary: ${dg11.personalSummary ?: "N/A"}")
-            Log.i("NfcReader", "│ Proof of Citizenship: ${dg11.proofOfCitizenship ?: "N/A"}")
-            Log.i("NfcReader", "│ Other Valid TDs : ${dg11.otherValidTDNumbers?.joinToString() ?: "N/A"}")
-            Log.i("NfcReader", "│ Custody Info    : ${dg11.custodyInformation ?: "N/A"}")
-            Log.i("NfcReader", "└─────────────────────────────────────┘")
-        } catch (e: Exception) {
-            Log.w("NfcReader", "⚠️ DG11 not available: ${e.message}")
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // DG12: ADDITIONAL DOCUMENT DETAILS
-    // ═══════════════════════════════════════════════════════
-    private fun readDG12(service: PassportService) {
-        try {
-            val stream = service.getInputStream(PassportService.EF_DG12)
-            val dg12 = LDSFileUtil.getLDSFile(PassportService.EF_DG12, stream) as DG12File
-            stream.close()
-
-            Log.i("NfcReader", "┌─────────────────────────────────────┐")
-            Log.i("NfcReader", "│  DG12 - DOCUMENT DETAILS            │")
-            Log.i("NfcReader", "├─────────────────────────────────────┤")
-            Log.i("NfcReader", "│ Issuing Authority : ${dg12.issuingAuthority ?: "N/A"}")
-            Log.i("NfcReader", "│ Date of Issue     : ${dg12.dateOfIssue ?: "N/A"}")
-            Log.i("NfcReader", "│ Endorsements      : ${dg12.endorsementsAndObservations ?: "N/A"}")
-            Log.i("NfcReader", "│ Tax/Exit Reqs     : ${dg12.taxOrExitRequirements ?: "N/A"}")
-            Log.i("NfcReader", "│ Personalization SN: ${dg12.personalizationSystemSerialNumber ?: "N/A"}")
-            Log.i("NfcReader", "└─────────────────────────────────────┘")
-        } catch (e: Exception) {
-            Log.w("NfcReader", "⚠️ DG12 not available: ${e.message}")
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════
-    // DG14: SECURITY OPTIONS
-    // ═══════════════════════════════════════════════════════
-    private fun readDG14(service: PassportService) {
-        try {
-            val stream = service.getInputStream(PassportService.EF_DG14)
-            val dg14 = LDSFileUtil.getLDSFile(PassportService.EF_DG14, stream) as DG14File
-            stream.close()
-
-            Log.i("NfcReader", "┌─────────────────────────────────────┐")
-            Log.i("NfcReader", "│  DG14 - SECURITY OPTIONS            │")
-            Log.i("NfcReader", "├─────────────────────────────────────┤")
-            Log.i("NfcReader", "│ Security Infos  : ${dg14.securityInfos.size}")
-            dg14.securityInfos.forEachIndexed { i, info ->
-                Log.i("NfcReader", "│ [$i] ${info.javaClass.simpleName}: ${info.objectIdentifier}")
+    private suspend fun ensureConnected(isoDep: IsoDep) {
+        var retries = 3
+        while (!isoDep.isConnected && retries > 0) {
+            try {
+                isoDep.connect()
+                Log.d("NfcReader", "Reconnected to IsoDep")
+                break
+            } catch (e: Exception) {
+                retries--
+                Log.e("NfcReader", "Failed to reconnect ($retries left): ${e.message}")
+                if (retries > 0) delay(200)
             }
-            Log.i("NfcReader", "└─────────────────────────────────────┘")
-        } catch (e: Exception) {
-            Log.w("NfcReader", "⚠️ DG14 not available: ${e.message}")
         }
     }
 
-    // ═══════════════════════════════════════════════════════
-    // DG15: ACTIVE AUTHENTICATION
-    // ═══════════════════════════════════════════════════════
-    private fun readDG15(service: PassportService) {
-        try {
-            val stream = service.getInputStream(PassportService.EF_DG15)
-            val dg15 = LDSFileUtil.getLDSFile(PassportService.EF_DG15, stream) as DG15File
-            stream.close()
+    private fun compressIfOversized(file: File, maxSizeMB: Int = 2) {
+        val maxBytes = maxSizeMB * 1024 * 1024
+        if (file.length() <= maxBytes) return
 
-            Log.i("NfcReader", "┌─────────────────────────────────────┐")
-            Log.i("NfcReader", "│  DG15 - ACTIVE AUTHENTICATION       │")
-            Log.i("NfcReader", "├─────────────────────────────────────┤")
-            Log.i("NfcReader", "│ Public Key Algorithm: ${dg15.publicKey.algorithm}")
-            Log.i("NfcReader", "│ Public Key Format   : ${dg15.publicKey.format}")
-            Log.i("NfcReader", "│ Public Key Length   : ${dg15.publicKey.encoded.size} bytes")
-            Log.i("NfcReader", "└─────────────────────────────────────┘")
-        } catch (e: Exception) {
-            Log.w("NfcReader", "⚠️ DG15 not available: ${e.message}")
+        Log.w("NfcReader", "  File too large (${file.length() / 1024 / 1024}MB), compressing...")
+
+        val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return
+        val tempFile = File(file.parent, "${file.name}.tmp")
+
+        FileOutputStream(tempFile).use { out ->
+            val scaleFactor = if (file.length() > 10 * 1024 * 1024) 0.5f else 0.8f
+            val scaled = Bitmap.createScaledBitmap(
+                bitmap,
+                (bitmap.width * scaleFactor).toInt(),
+                (bitmap.height * scaleFactor).toInt(),
+                true
+            )
+            scaled.compress(Bitmap.CompressFormat.JPEG, 85, out)
+        }
+
+        bitmap.recycle()
+
+        if (tempFile.length() < file.length()) {
+            file.delete()
+            tempFile.renameTo(file)
+            Log.i("NfcReader", "  Compressed to ${file.length() / 1024}KB")
+        } else {
+            tempFile.delete()
         }
     }
 
-    // ═══════════════════════════════════════════════════════
-    // SOD: DOCUMENT SIGNATURE
-    // ═══════════════════════════════════════════════════════
-    private fun readSOD(service: PassportService) {
-        try {
-            val stream = service.getInputStream(PassportService.EF_SOD)
-            // Read raw bytes instead of parsing SODFile to avoid BC crash
-            val sodBytes = stream.readBytes()
-            stream.close()
-
-            Log.i("NfcReader", "┌─────────────────────────────────────┐")
-            Log.i("NfcReader", "│  SOD - DOCUMENT SIGNATURE           │")
-            Log.i("NfcReader", "├─────────────────────────────────────┤")
-            Log.i("NfcReader", "│ SOD Size          : ${sodBytes.size} bytes")
-            Log.i("NfcReader", "│ SOD Hex (first 32): ${sodBytes.take(32).joinToString("") { "%02x".format(it) }}")
-            Log.i("NfcReader", "└─────────────────────────────────────┘")
-        } catch (e: Exception) {
-            Log.w("NfcReader", "⚠️ SOD not available: ${e.message}")
-        }
-    }
-
-    private fun detectImageFormat(bytes: ByteArray?): String {
-        if (bytes == null || bytes.size < 4) return "Unknown"
-        return when {
-            bytes[0] == 0xFF.toByte() && bytes[1] == 0xD8.toByte() -> "JPEG"
-            bytes[0] == 0x89.toByte() && bytes[1] == 0x50.toByte() -> "PNG"
-            bytes[0] == 0x00.toByte() && bytes[1] == 0x00.toByte() -> "JPEG2000"
-            else -> "Unknown"
-        }
-    }
+    private fun String.mask(): String = if (length > 2) "${take(2)}****${takeLast(1)}" else "****"
 }

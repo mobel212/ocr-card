@@ -1,3 +1,12 @@
-- [x] Implement `sendSelectApplet` call in `NfcReaderImpl.kt`
-- [x] Verify the fix in Logcat/NfcReader logs
-- [x] Create walkthrough summary
+- [ ] Remove emojis from project
+    - [ ] `NfcReaderImpl.kt`
+    - [ ] `NfcTestViewModel.kt`
+    - [ ] `NfcScreen.kt`
+    - [ ] `HistoryScreen.kt`
+    - [ ] `HomeScreen.kt`
+    - [ ] `ResultScreen.kt`
+- [ ] Add JPEG 2000 decoding support
+    - [ ] Add JitPack to `settings.gradle.kts`
+    - [ ] Add `jp2-android` dependency to `build.gradle.kts`
+- [ ] Implement JP2 to JPEG conversion in `NfcReaderImpl.kt`
+- [ ] Verify image display in NFC and History screens

@@ -43,9 +43,34 @@ android {
     buildFeatures {
         viewBinding = true
     }
+
+    packaging {
+        resources {
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/NOTICE.md"
+        }
+    }
+}
+
+configurations.all {
+    resolutionStrategy {
+        force("org.bouncycastle:bcprov-jdk15to18:1.69")
+        force("org.bouncycastle:bcutil-jdk15to18:1.69")
+        force("org.bouncycastle:bcpkix-jdk15to18:1.69")
+    }
+    exclude(group = "org.bouncycastle", module = "bcprov-jdk18on")
+    exclude(group = "org.bouncycastle", module = "bcutil-jdk18on")
+    exclude(group = "org.bouncycastle", module = "bcpkix-jdk18on")
+    exclude(group = "org.bouncycastle", module = "bcprov-jdk15on")
+    exclude(group = "org.bouncycastle", module = "bcutil-jdk15on")
+    exclude(group = "org.bouncycastle", module = "bcpkix-jdk15on")
 }
 
 dependencies {
+
+    //splash screen
+    implementation("androidx.core:core-splashscreen:1.0.0")
 
     //dagger hilt
     implementation("com.google.dagger:hilt-android:2.60.1")
@@ -92,13 +117,16 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
 
-    //nfc libraries
-    // JMRTD for ICAO smartcard communication
-    implementation("org.jmrtd:jmrtd:0.7.34")
+    // Biometric Image Processing (Maven Central)
+    implementation("com.github.mhshams:jnbis:2.1.2")
+    implementation("org.jmrtd:jmrtd:0.8.7")
     implementation("net.sf.scuba:scuba-sc-android:0.0.26")
-
-    // Bouncy Castle for BAC cryptographic handshake
-    implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+    implementation("io.github.michaldvorak-gemalto:jp2-android:1.1.0")
+    
+    // Consistent Bouncy Castle environment for JMRTD
+    implementation("org.bouncycastle:bcprov-jdk15to18:1.69")
+    implementation("org.bouncycastle:bcutil-jdk15to18:1.69")
+    implementation("org.bouncycastle:bcpkix-jdk15to18:1.69")
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)

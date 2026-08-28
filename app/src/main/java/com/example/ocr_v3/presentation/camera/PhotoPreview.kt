@@ -195,7 +195,7 @@ fun PhotoPreview(
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryPurple),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Scan")
+                    Text("Scan" , color = BackgroundLight)
                 }
             }
         }
