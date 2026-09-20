@@ -116,7 +116,7 @@ fun HomeScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Card Scanner",
+                    text = "CNIe Scanner",
                     fontSize = 32.sp,
                     color = TextDark,
                     fontWeight = FontWeight.Bold
